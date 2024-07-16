@@ -188,8 +188,8 @@ app.get("/me", async (req, res) => {
 app.post("/me/send-money", async (req, res) => {
   // const email = req.email;
   const email = req.headers.email;
-  const { recipent, amount } = req.body;
-  if (!recipent || !amount) {
+  const { recipient, amount } = req.body;
+  if (!recipient || !amount) {
     res.status(400).json({ success: false, message: "Invalid Body Request" });
     return;
   }
@@ -205,8 +205,8 @@ app.post("/me/send-money", async (req, res) => {
       return;
     }
 
-    if (!(await db.collection("users").findOne({ number: recipent }))) {
-      res.status(400).json({ success: false, message: "Recipent Not Found!" });
+    if (!(await db.collection("users").findOne({ number: recipient }))) {
+      res.status(400).json({ success: false, message: "Recipient Not Found!" });
       return;
     }
 
@@ -228,7 +228,8 @@ app.post("/me/send-money", async (req, res) => {
 
     const total = parseFloat(amount) + fee;
     const body = {
-      recipent: recipent,
+      action: "Send Money",
+      recipient: recipient,
       sender: email,
       amount: parseFloat(amount),
       fee: fee,
@@ -245,7 +246,7 @@ app.post("/me/send-money", async (req, res) => {
       }
     );
     await db.collection("users").updateOne(
-      { number: recipent },
+      { number: recipient },
       {
         $inc: { balance: parseFloat(amount) },
       }
@@ -262,7 +263,84 @@ app.post("/me/send-money", async (req, res) => {
   }
 });
 
-// Route: User
+// Cash Out: Private-Protected Route: TODO
+app.post("/me/cash-out", async (req, res) => {
+  // const email = req.email;
+  const email = req.headers.email;
+  const { recipient, amount } = req.body;
+  if (!recipient || !amount) {
+    res.status(400).json({ success: false, message: "Invalid Body Request" });
+    return;
+  }
+
+  try {
+    const exists = await db.collection("users").findOne({
+      $or: [{ email: email }, { number: email }],
+    });
+
+    if (!exists) {
+      res.status(400).json({ success: false, message: "User Not Found!" });
+      return;
+    }
+
+    const agent = await db.collection("users").findOne({ number: recipient });
+    if (!agent) {
+      res.status(400).json({ success: false, message: "Recipient Not Found!" });
+      return;
+    } else {
+      if (agent.role !== "agent") {
+        res
+          .status(400)
+          .json({ success: false, message: "Recipient is not an Agent!" });
+        return;
+      }
+    }
+
+    if (parseFloat(amount) > parseFloat(exists.balance)) {
+      res
+        .status(400)
+        .json({ success: false, message: "You don't have enough Balance!" });
+      return;
+    }
+
+    const fee = parseFloat(amount) * 0.015;
+
+    const total = parseFloat(amount) + fee;
+    const body = {
+      action: "Cash Out",
+      recipient: recipient,
+      sender: email,
+      amount: parseFloat(amount),
+      fee: fee,
+      time: new Date().toJSON(),
+    };
+
+    const response = await db.collection("transaction-history").insertOne(body);
+    await db.collection("users").updateOne(
+      {
+        $or: [{ email: email }, { number: email }],
+      },
+      {
+        $inc: { balance: -total },
+      }
+    );
+    await db.collection("users").updateOne(
+      { number: recipient },
+      {
+        $inc: { balance: total },
+      }
+    );
+
+    res.status(200).json({ success: true, ...response });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+
+      message: "Failed to Send Money",
+      error: error.message,
+    });
+  }
+});
 
 // Connecting to MongoDB first, then Starting the Server
 client
