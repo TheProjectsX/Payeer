@@ -228,12 +228,13 @@ app.post("/me/send-money", async (req, res) => {
 
     const total = parseFloat(amount) + fee;
     const body = {
-      action: "Send Money",
+      action: "send-money",
       recipient: recipient,
       sender: email,
       amount: parseFloat(amount),
       fee: fee,
       time: new Date().toJSON(),
+      status: "resolved",
     };
 
     const response = await db.collection("transaction-history").insertOne(body);
@@ -307,12 +308,13 @@ app.post("/me/cash-out", async (req, res) => {
 
     const total = parseFloat(amount) + fee;
     const body = {
-      action: "Cash Out",
+      action: "cash-out",
       recipient: recipient,
       sender: email,
       amount: parseFloat(amount),
       fee: fee,
       time: new Date().toJSON(),
+      status: "resolved",
     };
 
     const response = await db.collection("transaction-history").insertOne(body);
@@ -336,7 +338,93 @@ app.post("/me/cash-out", async (req, res) => {
     res.status(500).json({
       success: false,
 
-      message: "Failed to Send Money",
+      message: "Failed to Cash Out",
+      error: error.message,
+    });
+  }
+});
+
+// Cash In: Protected Route: TODO
+app.post("/me/cash-in-request", async (req, res) => {
+  // const email = req.email;
+  const email = req.headers.email;
+  const { recipient, amount } = req.body;
+  if (!recipient || !amount) {
+    res.status(400).json({ success: false, message: "Invalid Body Request" });
+    return;
+  }
+
+  try {
+    const exists = await db.collection("users").findOne({
+      $or: [{ email: email }, { number: email }],
+    });
+
+    if (!exists) {
+      res.status(400).json({ success: false, message: "User Not Found!" });
+      return;
+    }
+
+    const agent = await db.collection("users").findOne({ number: recipient });
+    if (!agent) {
+      res.status(400).json({ success: false, message: "Recipient Not Found!" });
+      return;
+    } else {
+      if (agent.role !== "agent") {
+        res
+          .status(400)
+          .json({ success: false, message: "Recipient is not an Agent!" });
+        return;
+      }
+    }
+
+    const fee = 0;
+
+    const body = {
+      action: "cash-in",
+      recipient: recipient,
+      sender: email,
+      amount: parseFloat(amount),
+      fee: fee,
+      time: new Date().toJSON(),
+      status: "pending",
+    };
+
+    const response = await db.collection("transaction-history").insertOne(body);
+
+    res
+      .status(200)
+      .json({ success: true, message: "Cash-In Request Sent!", ...response });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+
+      message: "Failed to Request Cash In",
+      error: error.message,
+    });
+  }
+});
+
+// Get Balance: Protected Route: TODO
+app.get("/me/transactions", async (req, res) => {
+  // const email = req.email;
+  const number = req.headers.email;
+
+  try {
+    const history = await db
+      .collection("transaction-history")
+      .find({
+        $or: [{ sender: number }, { recipient: number }],
+      })
+      .sort({ _id: -1 })
+      .limit(10)
+      .toArray();
+
+    res.status(200).json({ success: true, history });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+
+      message: "Failed to Create User",
       error: error.message,
     });
   }
