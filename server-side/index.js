@@ -392,7 +392,7 @@ app.post("/me/cash-in-request", async (req, res) => {
   }
 });
 
-// Get Balance: Protected Route: TODO
+// Get Transactions: Protected Route: TODO
 app.get("/me/transactions", async (req, res) => {
   // const email = req.email;
   const email = req.headers.email;
@@ -421,7 +421,7 @@ app.get("/me/transactions", async (req, res) => {
     res.status(500).json({
       success: false,
 
-      message: "Failed to Create User",
+      message: "Failed to get Transaction History",
       error: error.message,
     });
   }
@@ -476,7 +476,10 @@ app.put("/agent/approve-cash-in/:id", async (req, res) => {
 
     const response = await db
       .collection("transaction-history")
-      .updateOne({ _id: new ObjectId(transactionId) }, { $set: {status: "resolved"} });
+      .updateOne(
+        { _id: new ObjectId(transactionId) },
+        { $set: { status: "resolved" } }
+      );
     res.status(200).json({ success: true, ...response });
   } catch (error) {
     res.status(500).json({
@@ -535,7 +538,10 @@ app.put("/agent/approve-cash-out/:id", async (req, res) => {
 
     const response = await db
       .collection("transaction-history")
-      .updateOne({ _id: new ObjectId(transactionId) }, { $set: {status: "resolved"} });
+      .updateOne(
+        { _id: new ObjectId(transactionId) },
+        { $set: { status: "resolved" } }
+      );
 
     res.status(200).json({ success: true, ...response });
   } catch (error) {
@@ -544,7 +550,123 @@ app.put("/agent/approve-cash-out/:id", async (req, res) => {
       message: "Failed to approve Cash Out Request",
       error: error.message,
     });
-    console.log(error)
+    console.log(error);
+  }
+});
+
+// Admin Routes
+// Get All Users: Admin Route: TODO
+app.get("/admin/users", async (req, res) => {
+  const { name } = req.query;
+
+  let query = {};
+  if (name) {
+    query = { name: new RegExp(name, "i") };
+  }
+
+  try {
+    const users = await db.collection("users").find(query).toArray();
+
+    res.status(200).json({ success: true, users });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to get User List",
+      error: error.message,
+    });
+    console.log(error);
+  }
+});
+
+// Activate Account: Admin Route: TODO
+app.put("/admin/activate/:id", async (req, res) => {
+  const userID = req.params.id;
+  try {
+    const exists = await db
+      .collection("users")
+      .findOne({ _id: new ObjectId(userID) });
+      console.log(exists, userID)
+    if (!exists) {
+      res
+        .status(400)
+        .json({ success: false, message: "User Does not Exist!" });
+      return;
+    }
+
+    if (exists.status === "active") {
+      res
+        .status(400)
+        .json({ success: false, message: "User account is already Active!" });
+      return;
+    }
+
+    const response = await db
+      .collection("users")
+      .updateOne({ _id: new ObjectId(userID) }, { $set: { status: "active" } });
+      res.status(200).json({ success: true, ...response });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to change User Status",
+      error: error.message,
+    });
+    console.log(error);
+  }
+});
+
+// Block Account: Admin Route: TODO
+app.put("/admin/block/:id", async (req, res) => {
+  const userID = req.params.id;
+  try {
+    const exists = await db
+      .collection("users")
+      .findOne({ _id: new ObjectId(userID) });
+    if (!exists) {
+      res
+        .status(400)
+        .json({ success: false, message: "User Does not Exist!" });
+      return;
+    }
+
+    if (exists.status === "blocked") {
+      res
+        .status(400)
+        .json({ success: false, message: "User account is already Blocked!" });
+      return;
+    }
+
+    const response = await db
+      .collection("users")
+      .updateOne({ _id: new ObjectId(userID) }, { $set: { status: "blocked" } });
+      res.status(200).json({ success: true, ...response });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to change User Status",
+      error: error.message,
+    });
+    console.log(error);
+  }
+});
+
+
+// Get all Transactions: Admin Route: TODO
+app.get("/admin/transactions", async (req, res) => {
+
+  try {
+    const history = await db
+      .collection("transaction-history")
+      .find()
+      .sort({ _id: -1 })
+      .toArray();
+
+    res.status(200).json({ success: true, history });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to get Transaction History",
+      error: error.message,
+    });
   }
 });
 
