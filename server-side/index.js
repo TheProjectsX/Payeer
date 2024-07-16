@@ -158,7 +158,7 @@ app.post("/users/login", async (req, res) => {
 });
 
 // User Routes
-// Get User: Protected Route
+// Get User: Protected Route: TODO
 app.get("/me", async (req, res) => {
   // const email = req.email;
   const email = req.headers.email;
@@ -179,6 +179,84 @@ app.get("/me", async (req, res) => {
       success: false,
 
       message: "Failed to Create User",
+      error: error.message,
+    });
+  }
+});
+
+// Send Money: Protected Route: TODO
+app.post("/me/send-money", async (req, res) => {
+  // const email = req.email;
+  const email = req.headers.email;
+  const { recipent, amount } = req.body;
+  if (!recipent || !amount) {
+    res.status(400).json({ success: false, message: "Invalid Body Request" });
+    return;
+  }
+
+  try {
+    let fee = 0;
+    const exists = await db.collection("users").findOne({
+      $or: [{ email: email }, { number: email }],
+    });
+
+    if (!exists) {
+      res.status(400).json({ success: false, message: "User Not Found!" });
+      return;
+    }
+
+    if (!(await db.collection("users").findOne({ number: recipent }))) {
+      res.status(400).json({ success: false, message: "Recipent Not Found!" });
+      return;
+    }
+
+    if (parseFloat(amount) > parseFloat(exists.balance)) {
+      res
+        .status(400)
+        .json({ success: false, message: "You don't have enough Balance!" });
+      return;
+    }
+
+    if (parseFloat(amount) < 50) {
+      res
+        .status(400)
+        .json({ success: false, message: "Minimum Send Money is 50!" });
+      return;
+    } else if (parseFloat(amount) > 100) {
+      fee = 5;
+    }
+
+    const total = parseFloat(amount) + fee;
+    const body = {
+      recipent: recipent,
+      sender: email,
+      amount: parseFloat(amount),
+      fee: fee,
+      time: new Date().toJSON(),
+    };
+
+    const response = await db.collection("transaction-history").insertOne(body);
+    await db.collection("users").updateOne(
+      {
+        $or: [{ email: email }, { number: email }],
+      },
+      {
+        $inc: { balance: -total },
+      }
+    );
+    await db.collection("users").updateOne(
+      { number: recipent },
+      {
+        $inc: { balance: parseFloat(amount) },
+      }
+    );
+
+    res.status(200).json({ success: true, ...response });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+
+      message: "Failed to Send Money",
       error: error.message,
     });
   }
