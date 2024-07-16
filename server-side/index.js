@@ -157,7 +157,7 @@ app.post("/users/login", async (req, res) => {
   }
 });
 
-// User Routes
+// User-Agent Common Routes
 // Get User: Protected Route: TODO
 app.get("/me", async (req, res) => {
   // const email = req.email;
@@ -314,26 +314,13 @@ app.post("/me/cash-out", async (req, res) => {
       amount: parseFloat(amount),
       fee: fee,
       time: new Date().toJSON(),
-      status: "resolved",
+      status: "pending",
     };
 
     const response = await db.collection("transaction-history").insertOne(body);
-    await db.collection("users").updateOne(
-      {
-        $or: [{ email: email }, { number: email }],
-      },
-      {
-        $inc: { balance: -total },
-      }
-    );
-    await db.collection("users").updateOne(
-      { number: recipient },
-      {
-        $inc: { balance: total },
-      }
-    );
-
-    res.status(200).json({ success: true, ...response });
+    res
+      .status(200)
+      .json({ success: true, message: "Cash Out Request Sent!", ...response });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -349,6 +336,7 @@ app.post("/me/cash-in-request", async (req, res) => {
   // const email = req.email;
   const email = req.headers.email;
   const { recipient, amount } = req.body;
+
   if (!recipient || !amount) {
     res.status(400).json({ success: false, message: "Invalid Body Request" });
     return;
@@ -380,7 +368,7 @@ app.post("/me/cash-in-request", async (req, res) => {
     const fee = 0;
 
     const body = {
-      action: "cash-in",
+      action: "cash-in-request",
       recipient: recipient,
       sender: email,
       amount: parseFloat(amount),
@@ -407,16 +395,25 @@ app.post("/me/cash-in-request", async (req, res) => {
 // Get Balance: Protected Route: TODO
 app.get("/me/transactions", async (req, res) => {
   // const email = req.email;
-  const number = req.headers.email;
+  const email = req.headers.email;
 
   try {
+    const exists = await db.collection("users").findOne({
+      $or: [{ email: email }, { number: email }],
+    });
+
+    if (!exists) {
+      res.status(400).json({ success: false, message: "User Not Found!" });
+      return;
+    }
+
     const history = await db
       .collection("transaction-history")
       .find({
-        $or: [{ sender: number }, { recipient: number }],
+        $or: [{ sender: exists.number }, { recipient: exists.number }],
       })
       .sort({ _id: -1 })
-      .limit(10)
+      .limit(exists.role === "user" ? 10 : 20)
       .toArray();
 
     res.status(200).json({ success: true, history });
@@ -427,6 +424,127 @@ app.get("/me/transactions", async (req, res) => {
       message: "Failed to Create User",
       error: error.message,
     });
+  }
+});
+
+// Agent Routes
+// Cash In Approval: Protected Route: TODO
+app.put("/agent/approve-cash-in/:id", async (req, res) => {
+  // const number = req.user.????
+  const number = req.headers.email;
+  const transactionId = req.params.id;
+
+  try {
+    const transactionDetails = await db
+      .collection("transaction-history")
+      .findOne({ _id: new ObjectId(transactionId) });
+    if (!transactionDetails) {
+      res
+        .status(400)
+        .json({ success: false, message: "Invalid Transaction ID Provided" });
+      return;
+    }
+
+    if (transactionDetails.status === "resolved") {
+      res
+        .status(400)
+        .json({ success: false, message: "Transaction already Approved!" });
+      return;
+    }
+
+    if (transactionDetails.recipient !== number) {
+      res
+        .status(400)
+        .json({ success: false, message: "Unauthorized Request!" });
+      return;
+    }
+
+    await db.collection("users").updateOne(
+      {
+        number: transactionDetails.sender,
+      },
+      {
+        $inc: { balance: transactionDetails.amount },
+      }
+    );
+    await db.collection("users").updateOne(
+      { number: transactionDetails.recipient },
+      {
+        $inc: { balance: -transactionDetails.amount },
+      }
+    );
+
+    const response = await db
+      .collection("transaction-history")
+      .updateOne({ _id: new ObjectId(transactionId) }, { $set: {status: "resolved"} });
+    res.status(200).json({ success: true, ...response });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to approve Cash In Request",
+      error: error.message,
+    });
+  }
+});
+
+// Cash In Approval: Protected Route: TODO
+app.put("/agent/approve-cash-out/:id", async (req, res) => {
+  // const number = req.user.????
+  const number = req.headers.email;
+  const transactionId = req.params.id;
+
+  try {
+    const transactionDetails = await db
+      .collection("transaction-history")
+      .findOne({ _id: new ObjectId(transactionId) });
+    if (!transactionDetails) {
+      res
+        .status(400)
+        .json({ success: false, message: "Invalid Transaction ID Provided" });
+      return;
+    }
+
+    if (transactionDetails.status === "resolved") {
+      res
+        .status(400)
+        .json({ success: false, message: "Transaction already Approved!" });
+      return;
+    }
+
+    if (transactionDetails.recipient !== number) {
+      res
+        .status(400)
+        .json({ success: false, message: "Unauthorized Request!" });
+      return;
+    }
+
+    await db.collection("users").updateOne(
+      {
+        number: transactionDetails.sender,
+      },
+      {
+        $inc: { balance: -transactionDetails.amount - transactionDetails.fee },
+      }
+    );
+    await db.collection("users").updateOne(
+      { number: transactionDetails.recipient },
+      {
+        $inc: { balance: transactionDetails.amount + transactionDetails.fee },
+      }
+    );
+
+    const response = await db
+      .collection("transaction-history")
+      .updateOne({ _id: new ObjectId(transactionId) }, { $set: {status: "resolved"} });
+
+    res.status(200).json({ success: true, ...response });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to approve Cash Out Request",
+      error: error.message,
+    });
+    console.log(error)
   }
 });
 
