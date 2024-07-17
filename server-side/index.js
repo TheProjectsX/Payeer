@@ -11,7 +11,7 @@ dotenv.config();
 // Global Variables
 const User_Registration_Keys = [
   "name",
-  "password",
+  "pin",
   "number",
   "email",
   "role",
@@ -144,7 +144,7 @@ app.post("/users/register", async (req, res) => {
     return;
   }
 
-  if (body.password.length !== 5 || !/^\d+$/.test(body.password)) {
+  if (body.pin.length !== 5 || !/^\d+$/.test(body.pin)) {
     res.status(400).json({ success: false, message: "Invalid PIN Provided" });
     return;
   }
@@ -173,11 +173,11 @@ app.post("/users/register", async (req, res) => {
     body["status"] = "pending";
     body["balance"] = 0;
 
-    const newPassword = bcrypt.hashSync(
-      body.password,
+    const newPin = bcrypt.hashSync(
+      body.pin,
       parseInt(process.env.BCRYPT_SALT_ROUNDS)
     );
-    body["password"] = newPassword;
+    body["pin"] = newPin;
 
     const dbResult = await db.collection("users").insertOne(body);
     result = { success: true, ...dbResult };
@@ -197,9 +197,9 @@ app.post("/users/register", async (req, res) => {
 
 // User Login: Public
 app.post("/users/login", async (req, res) => {
-  const { email, password } = req.body;
+  const { email, pin } = req.body;
 
-  if (!email || !password) {
+  if (!email || !pin) {
     res.status(400).json({ success: false, message: "Invalid Body Request" });
     return;
   }
@@ -216,19 +216,24 @@ app.post("/users/login", async (req, res) => {
       return;
     }
 
-    if (!(await bcrypt.compare(password, exists.password))) {
+    if (!(await bcrypt.compare(pin, exists.pin))) {
       res
         .status(400)
         .json({ success: false, message: "Authentication Failed!" });
       return;
     }
 
-    if (exists.status === "pending"){
-      res.status(201).json({success: false, message: "Waiting for Account Approval from Admin!"})
-      return
-    } else if (exists.status === "blocked"){
-      res.status(201).json({success: false, message: "This account is Blocked"})
-      return
+    if (exists.status === "pending") {
+      res.status(201).json({
+        success: false,
+        message: "Waiting for Account Approval from Admin!",
+      });
+      return;
+    } else if (exists.status === "blocked") {
+      res
+        .status(201)
+        .json({ success: false, message: "This account is Blocked" });
+      return;
     }
 
     const token = jwt.sign(
@@ -246,10 +251,10 @@ app.post("/users/login", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-
-      message: "Failed to Create User",
+      message: "Failed to Login User",
       error: error.message,
     });
+    console.log(error);
   }
 });
 
@@ -280,8 +285,8 @@ app.get("/me", checkTokenAuthentication, async (req, res) => {
 app.post("/me/send-money", checkTokenAuthentication, async (req, res) => {
   const number = req.user.number;
 
-  const { recipient, amount, password } = req.body;
-  if (!recipient || !amount || !password) {
+  const { recipient, amount, pin } = req.body;
+  if (!recipient || !amount || !pin) {
     res.status(400).json({ success: false, message: "Invalid Body Request" });
     return;
   }
@@ -297,7 +302,7 @@ app.post("/me/send-money", checkTokenAuthentication, async (req, res) => {
       return;
     }
 
-    if (!(await bcrypt.compare(password, exists.password))) {
+    if (!(await bcrypt.compare(pin, exists.pin))) {
       res
         .status(400)
         .json({ success: false, message: "Wrong PIN Number provided" });
@@ -367,9 +372,9 @@ app.post("/me/send-money", checkTokenAuthentication, async (req, res) => {
 app.post("/me/cash-out-request", checkTokenAuthentication, async (req, res) => {
   const number = req.user.number;
 
-  const { recipient, amount, password } = req.body;
+  const { recipient, amount, pin } = req.body;
 
-  if (!recipient || !amount || !password) {
+  if (!recipient || !amount || !pin) {
     res.status(400).json({ success: false, message: "Invalid Body Request" });
     return;
   }
@@ -384,7 +389,7 @@ app.post("/me/cash-out-request", checkTokenAuthentication, async (req, res) => {
       return;
     }
 
-    if (!(await bcrypt.compare(password, exists.password))) {
+    if (!(await bcrypt.compare(pin, exists.pin))) {
       res
         .status(400)
         .json({ success: false, message: "Wrong PIN Number provided" });
@@ -720,10 +725,16 @@ app.put("/admin/activate/:id", checkAdminAuthentication, async (req, res) => {
         .json({ success: false, message: "User account is already Active!" });
       return;
     }
-    
-    const response = await db
-      .collection("users")
-      .updateOne({ _id: new ObjectId(userID) }, { $set: { status: "active", balance: exists.role === "user" ? 40 : 10000} });
+
+    const response = await db.collection("users").updateOne(
+      { _id: new ObjectId(userID) },
+      {
+        $set: {
+          status: "active",
+          balance: exists.role === "user" ? 40 : 10000,
+        },
+      }
+    );
     res.status(200).json({ success: true, ...response });
   } catch (error) {
     res.status(500).json({
