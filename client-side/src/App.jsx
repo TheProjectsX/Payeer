@@ -44,7 +44,7 @@ function App() {
         <UserDataContext.Provider
           value={{ userAuthData, setUserAuthData, dataLoading, setDataLoading }}
         >
-          <div className="px-4 bg-white dark:bg-gray-800">
+          <div className="bg-white dark:bg-gray-800">
             <Outlet />
           </div>
         </UserDataContext.Provider>

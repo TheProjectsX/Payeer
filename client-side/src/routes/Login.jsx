@@ -7,7 +7,7 @@ import UserDataContext from "../context/context";
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const context = useContext(UserDataContext);
   const { setUserAuthData } = context;
@@ -17,14 +17,14 @@ const Login = () => {
 
     const form = e.target;
     const email = form.email.value;
-    const password = form.password.value;
+    const pin = form.pin.value;
 
     const body = {
       email,
-      password,
+      pin,
     };
 
-    setLoading(true)
+    setLoading(true);
     const response = await fetch(
       `${import.meta.env.VITE_SERVER_URL}/users/login`,
       {
@@ -33,7 +33,7 @@ const Login = () => {
           "content-type": "application/json",
         },
         body: JSON.stringify(body),
-        credentials: "include"
+        credentials: "include",
       }
     );
 
@@ -43,7 +43,7 @@ const Login = () => {
       toast.error(data.message);
     } else {
       toast.success("Login Successful!");
-      setUserAuthData(data.userData)
+      setUserAuthData(data.userData);
       navigate("/");
     }
 
@@ -80,7 +80,7 @@ const Login = () => {
                   Your PIN Number <span className="text-red-600">*</span>
                   <input
                     type={showPassword ? "text" : "password"}
-                    name="password"
+                    name="pin"
                     placeholder={showPassword ? "12345" : "••••••"}
                     minLength={5}
                     className="mt-2 border-2 outline-none sm:text-sm rounded-lg block w-full p-2.5 bg-gray-200 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 focus:border-blue-500 dark:focus:border-gray-400"

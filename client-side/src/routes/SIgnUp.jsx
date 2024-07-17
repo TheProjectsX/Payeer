@@ -15,13 +15,13 @@ const SignUp = () => {
     const name = form.name.value;
     const number = form.number.value;
     const email = form.email.value;
-    const password = form.password.value;
+    const pin = form.pin.value;
     const role = form.role.value;
 
-    if (password.length !== 5) {
+    if (pin.length !== 5) {
       toast.error("Your PIN Must be 5 characters long");
       return;
-    } else if (!/^\d+$/.test(password)) {
+    } else if (!/^\d+$/.test(pin)) {
       toast.error("Your PIN Must be numbers only");
       return;
     }
@@ -30,7 +30,7 @@ const SignUp = () => {
       name,
       number,
       email,
-      password,
+      pin,
       role: role.checked ? "agent" : "user",
     };
 
@@ -115,7 +115,7 @@ const SignUp = () => {
                   Your PIN Number <span className="text-red-600">*</span>
                   <input
                     type={showPassword ? "text" : "password"}
-                    name="password"
+                    name="pin"
                     placeholder={showPassword ? "12345" : "••••••"}
                     minLength={5}
                     maxLength={5}
@@ -133,10 +133,14 @@ const SignUp = () => {
               <div className="flex items-center justify-between">
                 <div className="ml-3 text-sm">
                   <label className="inline-flex items-center mb-5 cursor-pointer">
-                    <input type="checkbox" name="role" className="sr-only peer" />
+                    <input
+                      type="checkbox"
+                      name="role"
+                      className="sr-only peer"
+                    />
                     <div className="relative w-8 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-400 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:w-4 after:h-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
                     <span className="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">
-                    SignUp as an Agent
+                      SignUp as an Agent
                     </span>
                   </label>
                 </div>
