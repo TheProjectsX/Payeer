@@ -53,6 +53,7 @@ const cookieOptions = {
 const checkTokenAuthentication = (req, res, next) => {
   const { access_token } = req.cookies;
   if (!access_token) {
+    console.log(access_token);
     return res
       .status(401)
       .json({ success: false, message: "Authentication failed!" });
@@ -256,6 +257,21 @@ app.post("/users/login", async (req, res) => {
     });
     console.log(error);
   }
+});
+
+// Remove JWT Token
+app.get("/logout", async (req, res) => {
+  const { access_token } = req.cookies;
+  if (!access_token) {
+    return res
+      .status(401)
+      .json({ success: false, message: "Authentication failed!" });
+  }
+
+  res
+    .clearCookie("access_token", cookieOptions)
+    .status(200)
+    .json({ success: true });
 });
 
 // User-Agent Common Routes
