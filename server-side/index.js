@@ -31,8 +31,8 @@ app.use(
 app.use(cookieParser());
 
 // Configuring Database
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.poi1lw7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
-const client = new MongoClient(uri, {
+// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.poi1lw7.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+const client = new MongoClient(process.env.DB_URI, {
   serverApi: {
     version: ServerApiVersion.v1,
     strict: false,
@@ -46,6 +46,82 @@ const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
   sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+};
+
+// Authentication Middleware
+const checkTokenAuthentication = (req, res, next) => {
+  const { access_token } = req.cookies;
+  if (!access_token) {
+    return res
+      .status(401)
+      .json({ success: false, message: "Authentication failed!" });
+  }
+
+  try {
+    const decrypted = jwt.verify(access_token, process.env.JWT_SECRET);
+    req.user = decrypted;
+  } catch (error) {
+    return res
+      .status(401)
+      .json({ success: false, message: "Authentication failed!" });
+  }
+
+  next();
+};
+
+// Admin Middleware
+const checkAgentAuthentication = async (req, res, next) => {
+  const { access_token } = req.cookies;
+  if (!access_token) {
+    return res
+      .status(401)
+      .json({ success: false, message: "Authentication failed!" });
+  }
+
+  try {
+    const decrypted = jwt.verify(access_token, process.env.JWT_SECRET);
+    req.user = decrypted;
+    const query = { email: decrypted.email };
+    const dbResult = await db.collection("users").findOne(query);
+    if (dbResult.role !== "agent") {
+      return res
+        .status(403)
+        .json({ success: false, message: "Forbidden Request" });
+    }
+  } catch (error) {
+    return res
+      .status(401)
+      .json({ success: false, message: "Authentication failed!" });
+  }
+
+  next();
+};
+// Admin Middleware
+const checkAdminAuthentication = async (req, res, next) => {
+  const { access_token } = req.cookies;
+  if (!access_token) {
+    return res
+      .status(401)
+      .json({ success: false, message: "Authentication failed!" });
+  }
+
+  try {
+    const decrypted = jwt.verify(access_token, process.env.JWT_SECRET);
+    req.user = decrypted;
+    const query = { email: decrypted.email };
+    const dbResult = await db.collection("users").findOne(query);
+    if (dbResult.role !== "admin") {
+      return res
+        .status(403)
+        .json({ success: false, message: "Forbidden Request" });
+    }
+  } catch (error) {
+    return res
+      .status(401)
+      .json({ success: false, message: "Authentication failed!" });
+  }
+
+  next();
 };
 
 // Test Route
@@ -158,18 +234,15 @@ app.post("/users/login", async (req, res) => {
 });
 
 // User-Agent Common Routes
-// Get User: Protected Route: TODO
-app.get("/me", async (req, res) => {
-  // const email = req.email;
-  const email = req.headers.email;
+// Get User: Protected Route
+app.get("/me", checkTokenAuthentication, async (req, res) => {
+  const email = req.user.email;
 
   try {
-    const exists = await db.collection("users").findOne({
-      $or: [{ email: email }, { number: email }],
-    });
+    const exists = await db.collection("users").findOne({ email: email });
 
     if (!exists) {
-      res.status(400).json({ success: false, message: "User Not Found!" });
+      res.status(404).json({ success: false, message: "User Not Found!" });
       return;
     }
 
@@ -177,17 +250,16 @@ app.get("/me", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-
-      message: "Failed to Create User",
+      message: "Failed to get User Information",
       error: error.message,
     });
   }
 });
 
-// Send Money: Protected Route: TODO
-app.post("/me/send-money", async (req, res) => {
-  // const email = req.email;
-  const email = req.headers.email;
+// Send Money: Protected Route
+app.post("/me/send-money", checkTokenAuthentication, async (req, res) => {
+  const number = req.user.number;
+
   const { recipient, amount } = req.body;
   if (!recipient || !amount) {
     res.status(400).json({ success: false, message: "Invalid Body Request" });
@@ -197,7 +269,7 @@ app.post("/me/send-money", async (req, res) => {
   try {
     let fee = 0;
     const exists = await db.collection("users").findOne({
-      $or: [{ email: email }, { number: email }],
+      number: number,
     });
 
     if (!exists) {
@@ -230,7 +302,7 @@ app.post("/me/send-money", async (req, res) => {
     const body = {
       action: "send-money",
       recipient: recipient,
-      sender: email,
+      sender: number,
       amount: parseFloat(amount),
       fee: fee,
       time: new Date().toJSON(),
@@ -240,7 +312,7 @@ app.post("/me/send-money", async (req, res) => {
     const response = await db.collection("transaction-history").insertOne(body);
     await db.collection("users").updateOne(
       {
-        $or: [{ email: email }, { number: email }],
+        number: number,
       },
       {
         $inc: { balance: -total },
@@ -265,10 +337,11 @@ app.post("/me/send-money", async (req, res) => {
 });
 
 // Cash Out: Private-Protected Route: TODO
-app.post("/me/cash-out", async (req, res) => {
-  // const email = req.email;
-  const email = req.headers.email;
+app.post("/me/cash-out-request", checkTokenAuthentication, async (req, res) => {
+  const number = req.user.number;
+
   const { recipient, amount } = req.body;
+
   if (!recipient || !amount) {
     res.status(400).json({ success: false, message: "Invalid Body Request" });
     return;
@@ -276,22 +349,22 @@ app.post("/me/cash-out", async (req, res) => {
 
   try {
     const exists = await db.collection("users").findOne({
-      $or: [{ email: email }, { number: email }],
+      number: number,
     });
 
     if (!exists) {
-      res.status(400).json({ success: false, message: "User Not Found!" });
+      res.status(404).json({ success: false, message: "User Not Found!" });
       return;
     }
 
     const agent = await db.collection("users").findOne({ number: recipient });
     if (!agent) {
-      res.status(400).json({ success: false, message: "Recipient Not Found!" });
+      res.status(404).json({ success: false, message: "Recipient Not Found!" });
       return;
     } else {
       if (agent.role !== "agent") {
         res
-          .status(400)
+          .status(406)
           .json({ success: false, message: "Recipient is not an Agent!" });
         return;
       }
@@ -299,18 +372,17 @@ app.post("/me/cash-out", async (req, res) => {
 
     if (parseFloat(amount) > parseFloat(exists.balance)) {
       res
-        .status(400)
+        .status(406)
         .json({ success: false, message: "You don't have enough Balance!" });
       return;
     }
 
     const fee = parseFloat(amount) * 0.015;
 
-    const total = parseFloat(amount) + fee;
     const body = {
-      action: "cash-out",
+      action: "cash-out-request",
       recipient: recipient,
-      sender: email,
+      sender: number,
       amount: parseFloat(amount),
       fee: fee,
       time: new Date().toJSON(),
@@ -331,10 +403,10 @@ app.post("/me/cash-out", async (req, res) => {
   }
 });
 
-// Cash In: Protected Route: TODO
-app.post("/me/cash-in-request", async (req, res) => {
-  // const email = req.email;
-  const email = req.headers.email;
+// Cash In: Protected Route
+app.post("/me/cash-in-request", checkTokenAuthentication, async (req, res) => {
+  const number = req.user.number;
+
   const { recipient, amount } = req.body;
 
   if (!recipient || !amount) {
@@ -344,22 +416,22 @@ app.post("/me/cash-in-request", async (req, res) => {
 
   try {
     const exists = await db.collection("users").findOne({
-      $or: [{ email: email }, { number: email }],
+      number: number,
     });
 
     if (!exists) {
-      res.status(400).json({ success: false, message: "User Not Found!" });
+      res.status(404).json({ success: false, message: "User Not Found!" });
       return;
     }
 
     const agent = await db.collection("users").findOne({ number: recipient });
     if (!agent) {
-      res.status(400).json({ success: false, message: "Recipient Not Found!" });
+      res.status(404).json({ success: false, message: "Recipient Not Found!" });
       return;
     } else {
       if (agent.role !== "agent") {
         res
-          .status(400)
+          .status(406)
           .json({ success: false, message: "Recipient is not an Agent!" });
         return;
       }
@@ -370,7 +442,7 @@ app.post("/me/cash-in-request", async (req, res) => {
     const body = {
       action: "cash-in-request",
       recipient: recipient,
-      sender: email,
+      sender: number,
       amount: parseFloat(amount),
       fee: fee,
       time: new Date().toJSON(),
@@ -392,18 +464,17 @@ app.post("/me/cash-in-request", async (req, res) => {
   }
 });
 
-// Get Transactions: Protected Route: TODO
-app.get("/me/transactions", async (req, res) => {
-  // const email = req.email;
-  const email = req.headers.email;
+// Get Transactions: Protected Route
+app.get("/me/transactions", checkTokenAuthentication, async (req, res) => {
+  const number = req.user.number;
 
   try {
     const exists = await db.collection("users").findOne({
-      $or: [{ email: email }, { number: email }],
+      number: number,
     });
 
     if (!exists) {
-      res.status(400).json({ success: false, message: "User Not Found!" });
+      res.status(404).json({ success: false, message: "User Not Found!" });
       return;
     }
 
@@ -428,10 +499,10 @@ app.get("/me/transactions", async (req, res) => {
 });
 
 // Agent Routes
-// Cash In Approval: Protected Route: TODO
-app.put("/agent/approve-cash-in/:id", async (req, res) => {
-  // const number = req.user.????
-  const number = req.headers.email;
+// Cash In Approval: Protected Route
+app.put("/agent/approve-cash-in/:id", checkAgentAuthentication, async (req, res) => {
+  const number = req.user.number
+  
   const transactionId = req.params.id;
 
   try {
@@ -445,16 +516,23 @@ app.put("/agent/approve-cash-in/:id", async (req, res) => {
       return;
     }
 
-    if (transactionDetails.status === "resolved") {
+    if (transactionDetails.action !== "cash-in-request") {
       res
         .status(400)
+        .json({ success: false, message: "Invalid Request" });
+      return;
+    }
+
+    if (transactionDetails.status === "resolved") {
+      res
+        .status(406)
         .json({ success: false, message: "Transaction already Approved!" });
       return;
     }
 
     if (transactionDetails.recipient !== number) {
       res
-        .status(400)
+        .status(401)
         .json({ success: false, message: "Unauthorized Request!" });
       return;
     }
@@ -490,10 +568,11 @@ app.put("/agent/approve-cash-in/:id", async (req, res) => {
   }
 });
 
-// Cash In Approval: Protected Route: TODO
-app.put("/agent/approve-cash-out/:id", async (req, res) => {
-  // const number = req.user.????
-  const number = req.headers.email;
+// Cash In Approval: Protected Route
+app.put("/agent/approve-cash-out/:id", checkAgentAuthentication, async (req, res) => {
+  const number = req.user.number
+
+  
   const transactionId = req.params.id;
 
   try {
@@ -507,16 +586,23 @@ app.put("/agent/approve-cash-out/:id", async (req, res) => {
       return;
     }
 
-    if (transactionDetails.status === "resolved") {
+    if (transactionDetails.action !== "cash-out-request") {
       res
         .status(400)
+        .json({ success: false, message: "Invalid Request" });
+      return;
+    }
+
+    if (transactionDetails.status === "resolved") {
+      res
+        .status(406)
         .json({ success: false, message: "Transaction already Approved!" });
       return;
     }
 
     if (transactionDetails.recipient !== number) {
       res
-        .status(400)
+        .status(401)
         .json({ success: false, message: "Unauthorized Request!" });
       return;
     }
@@ -550,13 +636,12 @@ app.put("/agent/approve-cash-out/:id", async (req, res) => {
       message: "Failed to approve Cash Out Request",
       error: error.message,
     });
-    console.log(error);
   }
 });
 
 // Admin Routes
-// Get All Users: Admin Route: TODO
-app.get("/admin/users", async (req, res) => {
+// Get All Users: Admin Route
+app.get("/admin/users", checkAdminAuthentication, async (req, res) => {
   const { name } = req.query;
 
   let query = {};
@@ -574,28 +659,25 @@ app.get("/admin/users", async (req, res) => {
       message: "Failed to get User List",
       error: error.message,
     });
-    console.log(error);
   }
 });
 
-// Activate Account: Admin Route: TODO
-app.put("/admin/activate/:id", async (req, res) => {
+// Activate Account: Admin Route
+app.put("/admin/activate/:id", checkAdminAuthentication, async (req, res) => {
   const userID = req.params.id;
+
   try {
     const exists = await db
       .collection("users")
       .findOne({ _id: new ObjectId(userID) });
-      console.log(exists, userID)
     if (!exists) {
-      res
-        .status(400)
-        .json({ success: false, message: "User Does not Exist!" });
+      res.status(404).json({ success: false, message: "User Does not Exist!" });
       return;
     }
 
     if (exists.status === "active") {
       res
-        .status(400)
+        .status(406)
         .json({ success: false, message: "User account is already Active!" });
       return;
     }
@@ -603,56 +685,54 @@ app.put("/admin/activate/:id", async (req, res) => {
     const response = await db
       .collection("users")
       .updateOne({ _id: new ObjectId(userID) }, { $set: { status: "active" } });
-      res.status(200).json({ success: true, ...response });
+    res.status(200).json({ success: true, ...response });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: "Failed to change User Status",
       error: error.message,
     });
-    console.log(error);
   }
 });
 
-// Block Account: Admin Route: TODO
-app.put("/admin/block/:id", async (req, res) => {
+// Block Account: Admin Route
+app.put("/admin/block/:id", checkAdminAuthentication, async (req, res) => {
   const userID = req.params.id;
+
   try {
     const exists = await db
       .collection("users")
       .findOne({ _id: new ObjectId(userID) });
     if (!exists) {
-      res
-        .status(400)
-        .json({ success: false, message: "User Does not Exist!" });
+      res.status(404).json({ success: false, message: "User Does not Exist!" });
       return;
     }
 
     if (exists.status === "blocked") {
       res
-        .status(400)
+        .status(406)
         .json({ success: false, message: "User account is already Blocked!" });
       return;
     }
 
     const response = await db
       .collection("users")
-      .updateOne({ _id: new ObjectId(userID) }, { $set: { status: "blocked" } });
-      res.status(200).json({ success: true, ...response });
+      .updateOne(
+        { _id: new ObjectId(userID) },
+        { $set: { status: "blocked" } }
+      );
+    res.status(200).json({ success: true, ...response });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: "Failed to change User Status",
       error: error.message,
     });
-    console.log(error);
   }
 });
 
-
-// Get all Transactions: Admin Route: TODO
-app.get("/admin/transactions", async (req, res) => {
-
+// Get all Transactions: Admin Route
+app.get("/admin/transactions", checkAdminAuthentication, async (req, res) => {
   try {
     const history = await db
       .collection("transaction-history")
