@@ -4,7 +4,11 @@ import App from "./App.jsx";
 import "./index.css";
 
 // Routers
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import {
+  createBrowserRouter,
+  Navigate,
+  RouterProvider,
+} from "react-router-dom";
 import Login from "./routes/Login.jsx";
 import SignUp from "./routes/SIgnUp.jsx";
 import PrivateRoute from "./components/PrivateRoute.jsx";
@@ -19,7 +23,7 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        element: <div>Hello</div>,
+        element: <Navigate to="/dashboard" />,
       },
       {
         path: "/login",
@@ -48,6 +52,10 @@ const router = createBrowserRouter([
           {
             path: "/dashboard",
             element: <Home />,
+            loader: () =>
+              fetch(`${import.meta.env.VITE_SERVER_URL}/me`, {
+                credentials: "include",
+              }),
           },
           {
             path: "/dashboard/send-money",

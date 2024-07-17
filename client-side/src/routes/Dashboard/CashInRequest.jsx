@@ -3,7 +3,7 @@ import { HiOutlineEye, HiOutlineEyeOff } from "react-icons/hi";
 import { Link } from "react-router-dom";
 import Swal from "sweetalert2";
 
-const SendMoney = () => {
+const CashInRequest = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -30,7 +30,6 @@ const SendMoney = () => {
           "content-type": "application/json",
         },
         body: JSON.stringify(body),
-        credentials: "include",
       }
     );
     const data = await response.json();
@@ -41,7 +40,6 @@ const SendMoney = () => {
         text: `Sent ${amount} tk to ${recipient}`,
         icon: "success",
       });
-      form.reset();
     } else {
       Swal.fire({
         title: "Error!",
@@ -51,6 +49,7 @@ const SendMoney = () => {
     }
 
     setLoading(false);
+    form.reset();
   };
 
   return (
@@ -121,7 +120,7 @@ const SendMoney = () => {
               }`}
               disabled={loading}
             >
-              {loading ? <span className="loading"></span> : "Send Money"}
+              Send Money
             </button>
           </form>
         </div>
@@ -130,4 +129,4 @@ const SendMoney = () => {
   );
 };
 
-export default SendMoney;
+export default CashInRequest;
