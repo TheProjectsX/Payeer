@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
 import { MongoClient, ObjectId, ServerApiVersion } from "mongodb";
+import bcrypt from "bcrypt";
 
 dotenv.config();
 
@@ -143,6 +144,11 @@ app.post("/users/register", async (req, res) => {
     return;
   }
 
+  if (body.password.length !== 5 || !/^\d+$/.test(body.password)) {
+    res.status(400).json({ success: false, message: "Invalid PIN Provided" });
+    return;
+  }
+
   let result, status;
   try {
     const existsNumber = await db
@@ -166,6 +172,12 @@ app.post("/users/register", async (req, res) => {
     }
     body["status"] = "pending";
     body["balance"] = 0;
+
+    const newPassword = bcrypt.hashSync(
+      body.password,
+      parseInt(process.env.BCRYPT_SALT_ROUNDS)
+    );
+    body["password"] = newPassword;
 
     const dbResult = await db.collection("users").insertOne(body);
     result = { success: true, ...dbResult };
@@ -204,7 +216,7 @@ app.post("/users/login", async (req, res) => {
       return;
     }
 
-    if (password !== exists.password) {
+    if (!(await bcrypt.compare(password, exists.password))) {
       res
         .status(400)
         .json({ success: false, message: "Authentication Failed!" });
@@ -260,8 +272,8 @@ app.get("/me", checkTokenAuthentication, async (req, res) => {
 app.post("/me/send-money", checkTokenAuthentication, async (req, res) => {
   const number = req.user.number;
 
-  const { recipient, amount } = req.body;
-  if (!recipient || !amount) {
+  const { recipient, amount, password } = req.body;
+  if (!recipient || !amount || !password) {
     res.status(400).json({ success: false, message: "Invalid Body Request" });
     return;
   }
@@ -274,6 +286,13 @@ app.post("/me/send-money", checkTokenAuthentication, async (req, res) => {
 
     if (!exists) {
       res.status(400).json({ success: false, message: "User Not Found!" });
+      return;
+    }
+
+    if (!(await bcrypt.compare(password, exists.password))) {
+      res
+        .status(400)
+        .json({ success: false, message: "Wrong PIN Number provided" });
       return;
     }
 
@@ -340,9 +359,9 @@ app.post("/me/send-money", checkTokenAuthentication, async (req, res) => {
 app.post("/me/cash-out-request", checkTokenAuthentication, async (req, res) => {
   const number = req.user.number;
 
-  const { recipient, amount } = req.body;
+  const { recipient, amount, password } = req.body;
 
-  if (!recipient || !amount) {
+  if (!recipient || !amount || !password) {
     res.status(400).json({ success: false, message: "Invalid Body Request" });
     return;
   }
@@ -354,6 +373,13 @@ app.post("/me/cash-out-request", checkTokenAuthentication, async (req, res) => {
 
     if (!exists) {
       res.status(404).json({ success: false, message: "User Not Found!" });
+      return;
+    }
+
+    if (!(await bcrypt.compare(password, exists.password))) {
+      res
+        .status(400)
+        .json({ success: false, message: "Wrong PIN Number provided" });
       return;
     }
 
@@ -500,144 +526,149 @@ app.get("/me/transactions", checkTokenAuthentication, async (req, res) => {
 
 // Agent Routes
 // Cash In Approval: Protected Route
-app.put("/agent/approve-cash-in/:id", checkAgentAuthentication, async (req, res) => {
-  const number = req.user.number
-  
-  const transactionId = req.params.id;
+app.put(
+  "/agent/approve-cash-in/:id",
+  checkAgentAuthentication,
+  async (req, res) => {
+    const number = req.user.number;
 
-  try {
-    const transactionDetails = await db
-      .collection("transaction-history")
-      .findOne({ _id: new ObjectId(transactionId) });
-    if (!transactionDetails) {
-      res
-        .status(400)
-        .json({ success: false, message: "Invalid Transaction ID Provided" });
-      return;
-    }
+    const transactionId = req.params.id;
 
-    if (transactionDetails.action !== "cash-in-request") {
-      res
-        .status(400)
-        .json({ success: false, message: "Invalid Request" });
-      return;
-    }
-
-    if (transactionDetails.status === "resolved") {
-      res
-        .status(406)
-        .json({ success: false, message: "Transaction already Approved!" });
-      return;
-    }
-
-    if (transactionDetails.recipient !== number) {
-      res
-        .status(401)
-        .json({ success: false, message: "Unauthorized Request!" });
-      return;
-    }
-
-    await db.collection("users").updateOne(
-      {
-        number: transactionDetails.sender,
-      },
-      {
-        $inc: { balance: transactionDetails.amount },
+    try {
+      const transactionDetails = await db
+        .collection("transaction-history")
+        .findOne({ _id: new ObjectId(transactionId) });
+      if (!transactionDetails) {
+        res
+          .status(400)
+          .json({ success: false, message: "Invalid Transaction ID Provided" });
+        return;
       }
-    );
-    await db.collection("users").updateOne(
-      { number: transactionDetails.recipient },
-      {
-        $inc: { balance: -transactionDetails.amount },
-      }
-    );
 
-    const response = await db
-      .collection("transaction-history")
-      .updateOne(
-        { _id: new ObjectId(transactionId) },
-        { $set: { status: "resolved" } }
+      if (transactionDetails.action !== "cash-in-request") {
+        res.status(400).json({ success: false, message: "Invalid Request" });
+        return;
+      }
+
+      if (transactionDetails.status === "resolved") {
+        res
+          .status(406)
+          .json({ success: false, message: "Transaction already Approved!" });
+        return;
+      }
+
+      if (transactionDetails.recipient !== number) {
+        res
+          .status(401)
+          .json({ success: false, message: "Unauthorized Request!" });
+        return;
+      }
+
+      await db.collection("users").updateOne(
+        {
+          number: transactionDetails.sender,
+        },
+        {
+          $inc: { balance: transactionDetails.amount },
+        }
       );
-    res.status(200).json({ success: true, ...response });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to approve Cash In Request",
-      error: error.message,
-    });
+      await db.collection("users").updateOne(
+        { number: transactionDetails.recipient },
+        {
+          $inc: { balance: -transactionDetails.amount },
+        }
+      );
+
+      const response = await db
+        .collection("transaction-history")
+        .updateOne(
+          { _id: new ObjectId(transactionId) },
+          { $set: { status: "resolved" } }
+        );
+      res.status(200).json({ success: true, ...response });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Failed to approve Cash In Request",
+        error: error.message,
+      });
+    }
   }
-});
+);
 
 // Cash In Approval: Protected Route
-app.put("/agent/approve-cash-out/:id", checkAgentAuthentication, async (req, res) => {
-  const number = req.user.number
+app.put(
+  "/agent/approve-cash-out/:id",
+  checkAgentAuthentication,
+  async (req, res) => {
+    const number = req.user.number;
 
-  
-  const transactionId = req.params.id;
+    const transactionId = req.params.id;
 
-  try {
-    const transactionDetails = await db
-      .collection("transaction-history")
-      .findOne({ _id: new ObjectId(transactionId) });
-    if (!transactionDetails) {
-      res
-        .status(400)
-        .json({ success: false, message: "Invalid Transaction ID Provided" });
-      return;
-    }
-
-    if (transactionDetails.action !== "cash-out-request") {
-      res
-        .status(400)
-        .json({ success: false, message: "Invalid Request" });
-      return;
-    }
-
-    if (transactionDetails.status === "resolved") {
-      res
-        .status(406)
-        .json({ success: false, message: "Transaction already Approved!" });
-      return;
-    }
-
-    if (transactionDetails.recipient !== number) {
-      res
-        .status(401)
-        .json({ success: false, message: "Unauthorized Request!" });
-      return;
-    }
-
-    await db.collection("users").updateOne(
-      {
-        number: transactionDetails.sender,
-      },
-      {
-        $inc: { balance: -transactionDetails.amount - transactionDetails.fee },
+    try {
+      const transactionDetails = await db
+        .collection("transaction-history")
+        .findOne({ _id: new ObjectId(transactionId) });
+      if (!transactionDetails) {
+        res
+          .status(400)
+          .json({ success: false, message: "Invalid Transaction ID Provided" });
+        return;
       }
-    );
-    await db.collection("users").updateOne(
-      { number: transactionDetails.recipient },
-      {
-        $inc: { balance: transactionDetails.amount + transactionDetails.fee },
-      }
-    );
 
-    const response = await db
-      .collection("transaction-history")
-      .updateOne(
-        { _id: new ObjectId(transactionId) },
-        { $set: { status: "resolved" } }
+      if (transactionDetails.action !== "cash-out-request") {
+        res.status(400).json({ success: false, message: "Invalid Request" });
+        return;
+      }
+
+      if (transactionDetails.status === "resolved") {
+        res
+          .status(406)
+          .json({ success: false, message: "Transaction already Approved!" });
+        return;
+      }
+
+      if (transactionDetails.recipient !== number) {
+        res
+          .status(401)
+          .json({ success: false, message: "Unauthorized Request!" });
+        return;
+      }
+
+      await db.collection("users").updateOne(
+        {
+          number: transactionDetails.sender,
+        },
+        {
+          $inc: {
+            balance: -transactionDetails.amount - transactionDetails.fee,
+          },
+        }
+      );
+      await db.collection("users").updateOne(
+        { number: transactionDetails.recipient },
+        {
+          $inc: { balance: transactionDetails.amount + transactionDetails.fee },
+        }
       );
 
-    res.status(200).json({ success: true, ...response });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to approve Cash Out Request",
-      error: error.message,
-    });
+      const response = await db
+        .collection("transaction-history")
+        .updateOne(
+          { _id: new ObjectId(transactionId) },
+          { $set: { status: "resolved" } }
+        );
+
+      res.status(200).json({ success: true, ...response });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Failed to approve Cash Out Request",
+        error: error.message,
+      });
+    }
   }
-});
+);
 
 // Admin Routes
 // Get All Users: Admin Route
