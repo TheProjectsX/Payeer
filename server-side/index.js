@@ -223,6 +223,14 @@ app.post("/users/login", async (req, res) => {
       return;
     }
 
+    if (exists.status === "pending"){
+      res.status(201).json({success: false, message: "Waiting for Account Approval from Admin!"})
+      return
+    } else if (exists.status === "blocked"){
+      res.status(201).json({success: false, message: "This account is Blocked"})
+      return
+    }
+
     const token = jwt.sign(
       { email: exists.email, number: exists.number },
       process.env.JWT_SECRET,
@@ -234,7 +242,7 @@ app.post("/users/login", async (req, res) => {
     res
       .cookie("access_token", token, cookieOptions)
       .status(200)
-      .json({ success: true });
+      .json({ success: true, userData: exists });
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -712,10 +720,10 @@ app.put("/admin/activate/:id", checkAdminAuthentication, async (req, res) => {
         .json({ success: false, message: "User account is already Active!" });
       return;
     }
-
+    
     const response = await db
       .collection("users")
-      .updateOne({ _id: new ObjectId(userID) }, { $set: { status: "active" } });
+      .updateOne({ _id: new ObjectId(userID) }, { $set: { status: "active", balance: exists.role === "user" ? 40 : 10000} });
     res.status(200).json({ success: true, ...response });
   } catch (error) {
     res.status(500).json({
