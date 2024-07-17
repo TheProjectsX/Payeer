@@ -57,7 +57,6 @@ const SignUp = () => {
     }
 
     setLoading(false);
-    form.reset();
   };
 
   return (
@@ -153,7 +152,7 @@ const SignUp = () => {
                 }`}
                 disabled={loading}
               >
-                Sign Up
+                {loading ? <span className="loading"></span> : "Sign Up"}
               </button>
               <p className="text-sm font-light dark:text-gray-400">
                 Already have an Account?{" "}

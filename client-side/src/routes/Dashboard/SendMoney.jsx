@@ -99,8 +99,6 @@ const SendMoney = () => {
                   type={showPassword ? "text" : "password"}
                   name="pin"
                   placeholder={showPassword ? "12345" : "••••••"}
-                  minLength={5}
-                  maxLength={5}
                   className="mt-2 border-2 outline-none sm:text-sm rounded-lg block w-full p-2.5 bg-gray-200 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 focus:border-blue-500 dark:focus:border-gray-400"
                   required
                 />

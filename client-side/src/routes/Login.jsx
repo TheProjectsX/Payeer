@@ -48,7 +48,6 @@ const Login = () => {
     }
 
     setLoading(false);
-    form.reset();
   };
 
   return (
@@ -118,7 +117,7 @@ const Login = () => {
                 }`}
                 disabled={loading}
               >
-                Login
+                {loading ? <span className="loading"></span> : "Login"}
               </button>
               <p className="text-sm font-light dark:text-gray-400">
                 Don’t have an account yet?{" "}

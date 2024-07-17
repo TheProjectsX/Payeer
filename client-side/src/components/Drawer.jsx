@@ -7,7 +7,7 @@ const Drawer = ({ children }) => {
     <div>
       <div className="drawer lg:drawer-open">
         <input id="my-drawer-2" type="checkbox" className="drawer-toggle" />
-        <div className="drawer-content p-5 h-screen">
+        <div className="drawer-content px-5 py-8 h-screen">
           {/* Page content here */}
           <div className="flex justify-end">
             <label
@@ -25,7 +25,7 @@ const Drawer = ({ children }) => {
             aria-label="close sidebar"
             className="drawer-overlay"
           ></label>
-          <ul className="menu bg-base-200 text-base-content min-h-full w-80 p-4">
+          <ul className="menu bg-base-200 text-base-content min-h-full w-80 px-4 py-8 space-y-3">
             {/* Sidebar content here */}
             <li>
               <Link to="/dashboard">Dashboard</Link>
@@ -34,10 +34,10 @@ const Drawer = ({ children }) => {
               <Link to="/dashboard/send-money">Send Money</Link>
             </li>
             <li>
-              <Link to="/dashboard/cash-in">Cash In</Link>
+              <Link to="/dashboard/cash-in-request">Cash In</Link>
             </li>
             <li>
-              <Link to="/dashboard/cash-out">Cash Out</Link>
+              <Link to="/dashboard/cash-out-request">Cash Out</Link>
             </li>
             <li>
               <Link to="/dashboard/transactions">Transaction History</Link>

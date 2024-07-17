@@ -15,6 +15,9 @@ import PrivateRoute from "./components/PrivateRoute.jsx";
 import Dashboard from "./routes/Dashboard/Dashboard.jsx";
 import { Home } from "./routes/Dashboard/Home.jsx";
 import SendMoney from "./routes/Dashboard/SendMoney.jsx";
+import CashInRequest from "./routes/Dashboard/CashInRequest.jsx";
+import CashOutRequest from "./routes/Dashboard/CashOutRequest.jsx";
+import TransactionHistory from "./routes/Dashboard/TransactionHistory.jsx";
 
 const router = createBrowserRouter([
   {
@@ -60,6 +63,22 @@ const router = createBrowserRouter([
           {
             path: "/dashboard/send-money",
             element: <SendMoney />,
+          },
+          {
+            path: "/dashboard/cash-in-request",
+            element: <CashInRequest />,
+          },
+          {
+            path: "/dashboard/cash-out-request",
+            element: <CashOutRequest />,
+          },
+          {
+            path: "/dashboard/transactions",
+            element: <TransactionHistory />,
+            loader: () =>
+              fetch(`${import.meta.env.VITE_SERVER_URL}/me/transactions`, {
+                credentials: "include",
+              }),
           },
         ],
       },

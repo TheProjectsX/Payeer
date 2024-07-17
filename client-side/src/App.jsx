@@ -4,6 +4,8 @@ import { Bounce, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useEffect, useState } from "react";
 
+import "@sweetalert2/theme-dark";
+
 function App() {
   const [userAuthData, setUserAuthData] = useState(null);
   const [dataLoading, setDataLoading] = useState(true);
@@ -14,15 +16,15 @@ function App() {
         credentials: "include",
       });
 
-      const data = await response.json()
-      if (!data.success){
-        setUserAuthData(null)
+      const data = await response.json();
+      if (!data.success) {
+        setUserAuthData(null);
       } else {
-        setUserAuthData(data)
+        setUserAuthData(data);
       }
-      setDataLoading(false)
+      setDataLoading(false);
     };
-    loadData()
+    loadData();
   }, []);
 
   return (

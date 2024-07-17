@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { HiOutlineEye, HiOutlineEyeOff } from "react-icons/hi";
 import Swal from "sweetalert2";
 
-const CashInRequest = () => {
+const CashOutRequest = () => {
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSendMoney = async (e) => {
@@ -10,15 +12,17 @@ const CashInRequest = () => {
     const form = e.target;
     const recipient = form.recipient.value;
     const amount = form.amount.value;
+    const pin = form.pin.value;
 
     const body = {
       recipient,
       amount,
+      pin,
     };
 
     setLoading(true);
     const response = await fetch(
-      `${import.meta.env.VITE_SERVER_URL}/me/cash-in-request`,
+      `${import.meta.env.VITE_SERVER_URL}/me/cash-out-request`,
       {
         method: "POST",
         headers: {
@@ -33,7 +37,7 @@ const CashInRequest = () => {
     if (data.success) {
       Swal.fire({
         title: "Success!",
-        text: `Cash In Request of ${amount} tk sent to ${recipient}`,
+        text: `Cash Out Request of ${amount} tk sent to ${recipient}`,
         icon: "success",
       });
       form.reset();
@@ -51,7 +55,7 @@ const CashInRequest = () => {
   return (
     <section>
       <h2 className="font-lato font-semibold text-3xl mb-8 text-center dark:text-white">
-        Send Cash In Request
+        Send Cash Out Request
       </h2>
 
       <div className="flex justify-center">
@@ -87,6 +91,24 @@ const CashInRequest = () => {
                 />
               </label>
             </div>
+            <div>
+              <label className="block text-sm font-medium dark:text-white relative">
+                Your PIN Number <span className="text-red-600">*</span>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="pin"
+                  placeholder={showPassword ? "12345" : "••••••"}
+                  className="mt-2 border-2 outline-none sm:text-sm rounded-lg block w-full p-2.5 bg-gray-200 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 focus:border-blue-500 dark:focus:border-gray-400"
+                  required
+                />
+                <div
+                  className="absolute right-1 top-8 text-xl p-2 cursor-pointer"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <HiOutlineEyeOff /> : <HiOutlineEye />}
+                </div>
+              </label>
+            </div>
             <button
               type="submit"
               name="submit"
@@ -104,4 +126,4 @@ const CashInRequest = () => {
   );
 };
 
-export default CashInRequest;
+export default CashOutRequest;
