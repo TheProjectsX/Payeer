@@ -554,6 +554,84 @@ app.get("/me/transactions", checkTokenAuthentication, async (req, res) => {
 });
 
 // Agent Routes
+// Get Cash In Pending Transactions: Protected Route
+app.get(
+  "/agent/pending/cash-in",
+  checkAgentAuthentication,
+  async (req, res) => {
+    const number = req.user.number;
+
+    try {
+      const exists = await db.collection("users").find({
+        number: number,
+      });
+
+      if (!exists) {
+        res.status(404).json({ success: false, message: "User Not Found!" });
+        return;
+      }
+
+      const requests = await db
+        .collection("transaction-history")
+        .find({
+          recipient: number,
+          status: "pending",
+          action: "cash-in-request",
+        })
+        .sort({ _id: -1 })
+        .toArray();
+
+      res.status(200).json({ success: true, requests });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+
+        message: "Failed to get Cash In Requests",
+        error: error.message,
+      });
+    }
+  }
+);
+
+// Get Cash Out Pending Transactions: Protected Route
+app.get(
+  "/agent/pending/cash-out",
+  checkAgentAuthentication,
+  async (req, res) => {
+    const number = req.user.number;
+
+    try {
+      const exists = await db.collection("users").find({
+        number: number,
+      });
+
+      if (!exists) {
+        res.status(404).json({ success: false, message: "User Not Found!" });
+        return;
+      }
+
+      const requests = await db
+        .collection("transaction-history")
+        .find({
+          recipient: number,
+          status: "pending",
+          action: "cash-out-request",
+        })
+        .sort({ _id: -1 })
+        .toArray();
+
+      res.status(200).json({ success: true, requests });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+
+        message: "Failed to get Cash Out Requests",
+        error: error.message,
+      });
+    }
+  }
+);
+
 // Cash In Approval: Protected Route
 app.put(
   "/agent/approve-cash-in/:id",
@@ -564,6 +642,15 @@ app.put(
     const transactionId = req.params.id;
 
     try {
+      const exists = await db.collection("users").findOne({
+        number: number,
+      });
+
+      if (!exists) {
+        res.status(400).json({ success: false, message: "User Not Found!" });
+        return;
+      }
+
       const transactionDetails = await db
         .collection("transaction-history")
         .findOne({ _id: new ObjectId(transactionId) });
@@ -590,6 +677,13 @@ app.put(
         res
           .status(401)
           .json({ success: false, message: "Unauthorized Request!" });
+        return;
+      }
+
+      if (transactionDetails.amount > exists.balance) {
+        res
+          .status(400)
+          .json({ success: false, message: "You don't have enough Balance!" });
         return;
       }
 
@@ -625,7 +719,7 @@ app.put(
   }
 );
 
-// Cash In Approval: Protected Route
+// Cash Out Approval: Protected Route
 app.put(
   "/agent/approve-cash-out/:id",
   checkAgentAuthentication,
