@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { HiOutlineEye, HiOutlineEyeOff } from "react-icons/hi";
 import Swal from "sweetalert2";
+import "@sweetalert2/theme-dark";
 
 const CashOutRequest = () => {
   const [showPassword, setShowPassword] = useState(false);

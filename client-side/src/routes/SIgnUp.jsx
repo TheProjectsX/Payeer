@@ -16,7 +16,7 @@ const SignUp = () => {
     const number = form.number.value;
     const email = form.email.value;
     const pin = form.pin.value;
-    const role = form.role.value;
+    const role = form.role;
 
     if (pin.length !== 5) {
       toast.error("Your PIN Must be 5 characters long");

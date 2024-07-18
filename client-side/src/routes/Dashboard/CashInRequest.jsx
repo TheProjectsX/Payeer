@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Swal from "sweetalert2";
+import "@sweetalert2/theme-dark";
 
 const CashInRequest = () => {
   const [loading, setLoading] = useState(false);

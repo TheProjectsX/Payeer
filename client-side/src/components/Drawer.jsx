@@ -34,21 +34,37 @@ const Drawer = ({ children }) => {
             <li>
               <Link to="/dashboard">Dashboard</Link>
             </li>
-            <li>
-              <Link to="/dashboard/send-money">Send Money</Link>
-            </li>
+            {userAuthData.role === "admin" ? (
+              <li>
+                <Link to="/dashboard/manage-users">Manage Users</Link>
+              </li>
+            ) : (
+              <li>
+                <Link to="/dashboard/send-money">Send Money</Link>
+              </li>
+            )}
+            {userAuthData.role === "user" && (
+              <>
+                <li>
+                  <Link to="/dashboard/cash-in">Cash In</Link>
+                </li>
+                <li>
+                  <Link to="/dashboard/cash-out">Cash Out</Link>
+                </li>
+              </>
+            )}
 
-            <li>
-              <Link to="/dashboard/cash-in">Cash In</Link>
-            </li>
-            <li>
-              <Link to="/dashboard/cash-out">Cash Out</Link>
-            </li>
-
-            <li>
-              <Link to="/dashboard/transactions">Transaction History</Link>
-            </li>
-
+            {userAuthData.role === "user" ? (
+              <li>
+                <Link to="/dashboard/all-transactions">
+                  Transaction History
+                </Link>
+              </li>
+            ) : (
+              <li>
+                <Link to="/dashboard/transactions">Transaction History</Link>
+              </li>
+            )}
             {userAuthData.role === "agent" ? (
               <>
                 <div className="divider"></div>

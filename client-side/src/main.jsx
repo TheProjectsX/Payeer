@@ -20,6 +20,9 @@ import CashOutRequest from "./routes/Dashboard/CashOutRequest.jsx";
 import TransactionHistory from "./routes/Dashboard/TransactionHistory.jsx";
 import AgentCashInRequests from "./routes/Dashboard/AgentCashInRequests.jsx";
 import AgentCashOutRequests from "./routes/Dashboard/AgentCashOutRequests.jsx";
+import AgentPrivateRoute from "./components/AgentPrivateRoute.jsx";
+import AdminPrivateRoute from "./components/AdminPrivateRoute.jsx";
+import AdminManageUsers from "./routes/Dashboard/AdminManageUsers.jsx";
 
 const router = createBrowserRouter([
   {
@@ -84,7 +87,12 @@ const router = createBrowserRouter([
           },
           {
             path: "/dashboard/cash-in-requests",
-            element: <AgentCashInRequests />,
+            element: (
+              <AgentPrivateRoute>
+                {" "}
+                <AgentCashInRequests />
+              </AgentPrivateRoute>
+            ),
             loader: () =>
               fetch(
                 `${import.meta.env.VITE_SERVER_URL}/agent/pending/cash-in`,
@@ -95,7 +103,11 @@ const router = createBrowserRouter([
           },
           {
             path: "/dashboard/cash-out-requests",
-            element: <AgentCashOutRequests />,
+            element: (
+              <AgentPrivateRoute>
+                <AgentCashOutRequests />
+              </AgentPrivateRoute>
+            ),
             loader: () =>
               fetch(
                 `${import.meta.env.VITE_SERVER_URL}/agent/pending/cash-out`,
@@ -103,6 +115,30 @@ const router = createBrowserRouter([
                   credentials: "include",
                 }
               ),
+          },
+          {
+            path: "/dashboard/manage-users",
+            element: (
+              <AdminPrivateRoute>
+                <AdminManageUsers />
+              </AdminPrivateRoute>
+            ),
+            loader: () =>
+              fetch(`${import.meta.env.VITE_SERVER_URL}/admin/users`, {
+                credentials: "include",
+              }),
+          },
+          {
+            path: "/dashboard/all-transactions",
+            element: (
+              <AdminPrivateRoute>
+                <TransactionHistory />
+              </AdminPrivateRoute>
+            ),
+            loader: () =>
+              fetch(`${import.meta.env.VITE_SERVER_URL}/admin/transactions`, {
+                credentials: "include",
+              }),
           },
         ],
       },

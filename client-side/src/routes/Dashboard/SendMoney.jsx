@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { HiOutlineEye, HiOutlineEyeOff } from "react-icons/hi";
-import { Link } from "react-router-dom";
 import Swal from "sweetalert2";
+import "@sweetalert2/theme-dark";
 
 const SendMoney = () => {
   const [showPassword, setShowPassword] = useState(false);
