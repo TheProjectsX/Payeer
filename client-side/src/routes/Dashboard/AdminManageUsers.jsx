@@ -77,12 +77,57 @@ const AdminManageUsers = () => {
     }
   };
 
+  const handleSearch = async (e) => {
+    e.preventDefault();
+
+    const name = e.target.name.value;
+
+    const response = await fetch(
+      `${import.meta.env.VITE_SERVER_URL}/admin/users?name=${name}`,
+      {
+        credentials: "include",
+      }
+    );
+
+    const data = await response.json();
+
+    if (data.success) {
+      setAllUsers(data.users);
+    } else {
+      Swal.fire({
+        title: "Error!",
+        text: data.message,
+        icon: "error",
+      });
+    }
+  };
+
   return (
     <section>
       <h2 className="font-lato font-semibold text-3xl mb-8 text-center dark:text-white">
         Manage Users
       </h2>
 
+      <div>
+        <form
+          className="flex justify-center items-center gap-5 mb-5"
+          onSubmit={handleSearch}
+        >
+          <div>
+            <label className="block text-sm font-medium dark:text-white">
+              <input
+                type="text"
+                name="name"
+                className="border-2 outline-none sm:text-sm rounded-lg block w-full p-2.5 bg-gray-200 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 focus:border-blue-500 dark:focus:border-gray-400"
+                placeholder="Search user by Name"
+              />
+            </label>
+          </div>
+          <button className="btn btn-neutral" type="submit">
+            Search
+          </button>
+        </form>
+      </div>
       <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
         {allUsers.length === 0 ? (
           <div className="p-5 text-center font-semibold text-xl italic">
