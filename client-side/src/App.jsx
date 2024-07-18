@@ -54,6 +54,9 @@ function App() {
             <Outlet />
           </div>
         </UserDataContext.Provider>
+        <footer className="p-4 text-center text-sm bg-white dark:bg-gray-800">
+          Copyright &copy; 2024. All Rights Reserved
+        </footer>
       </div>
     </>
   );
