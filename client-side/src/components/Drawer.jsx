@@ -1,8 +1,12 @@
-import React from "react";
+import React, { useContext } from "react";
 import { RiMenuUnfold3Line2 } from "react-icons/ri";
 import { Link } from "react-router-dom";
+import UserDataContext from "../context/context";
 
 const Drawer = ({ children }) => {
+  const context = useContext(UserDataContext);
+  const { userAuthData } = context;
+
   return (
     <div>
       <div className="drawer lg:drawer-open">
@@ -33,15 +37,33 @@ const Drawer = ({ children }) => {
             <li>
               <Link to="/dashboard/send-money">Send Money</Link>
             </li>
+
             <li>
-              <Link to="/dashboard/cash-in-request">Cash In</Link>
+              <Link to="/dashboard/cash-in">Cash In</Link>
             </li>
             <li>
-              <Link to="/dashboard/cash-out-request">Cash Out</Link>
+              <Link to="/dashboard/cash-out">Cash Out</Link>
             </li>
+
             <li>
               <Link to="/dashboard/transactions">Transaction History</Link>
             </li>
+
+            {userAuthData.role === "agent" ? (
+              <>
+                <div className="divider"></div>
+                <li>
+                  <Link to="/dashboard/cash-in-requests">Cash In Requests</Link>
+                </li>
+                <li>
+                  <Link to="/dashboard/cash-out-requests">
+                    Cash Out Requests
+                  </Link>
+                </li>
+              </>
+            ) : (
+              <></>
+            )}
           </ul>
         </div>
       </div>

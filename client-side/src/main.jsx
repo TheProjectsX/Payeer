@@ -18,6 +18,8 @@ import SendMoney from "./routes/Dashboard/SendMoney.jsx";
 import CashInRequest from "./routes/Dashboard/CashInRequest.jsx";
 import CashOutRequest from "./routes/Dashboard/CashOutRequest.jsx";
 import TransactionHistory from "./routes/Dashboard/TransactionHistory.jsx";
+import AgentCashInRequests from "./routes/Dashboard/AgentCashInRequests.jsx";
+import AgentCashOutRequests from "./routes/Dashboard/AgentCashOutRequests.jsx";
 
 const router = createBrowserRouter([
   {
@@ -65,11 +67,11 @@ const router = createBrowserRouter([
             element: <SendMoney />,
           },
           {
-            path: "/dashboard/cash-in-request",
+            path: "/dashboard/cash-in",
             element: <CashInRequest />,
           },
           {
-            path: "/dashboard/cash-out-request",
+            path: "/dashboard/cash-out",
             element: <CashOutRequest />,
           },
           {
@@ -79,6 +81,28 @@ const router = createBrowserRouter([
               fetch(`${import.meta.env.VITE_SERVER_URL}/me/transactions`, {
                 credentials: "include",
               }),
+          },
+          {
+            path: "/dashboard/cash-in-requests",
+            element: <AgentCashInRequests />,
+            loader: () =>
+              fetch(
+                `${import.meta.env.VITE_SERVER_URL}/agent/pending/cash-in`,
+                {
+                  credentials: "include",
+                }
+              ),
+          },
+          {
+            path: "/dashboard/cash-out-requests",
+            element: <AgentCashOutRequests />,
+            loader: () =>
+              fetch(
+                `${import.meta.env.VITE_SERVER_URL}/agent/pending/cash-out`,
+                {
+                  credentials: "include",
+                }
+              ),
           },
         ],
       },

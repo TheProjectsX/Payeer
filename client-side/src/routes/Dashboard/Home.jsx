@@ -18,7 +18,8 @@ export const Home = () => {
       <div className="flex justify-between gap-4 p-5 rounded-lg bg-gray-700 dark:text-white mb-6">
         <div>
           <h3 className="text-xl mb-3">
-            Name: <span className="font-bold">{userAuthData.name}</span>
+            Name: <span className="font-bold">{userAuthData.name}</span>{" "}
+            <span className="italic">({userAuthData.role})</span>
           </h3>
           <p>Email: {userAuthData.email}</p>
           <p>Number: {userAuthData.number}</p>
