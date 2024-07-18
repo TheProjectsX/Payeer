@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Swal from "sweetalert2";
 import "@sweetalert2/theme-dark";
+import { Helmet } from "react-helmet";
 
 const CashInRequest = () => {
   const [loading, setLoading] = useState(false);
@@ -51,6 +52,7 @@ const CashInRequest = () => {
 
   return (
     <section>
+      <Helmet>Send Cash in Request - Payeer</Helmet>
       <h2 className="font-lato font-semibold text-3xl mb-8 text-center dark:text-white">
         Send Cash In Request
       </h2>

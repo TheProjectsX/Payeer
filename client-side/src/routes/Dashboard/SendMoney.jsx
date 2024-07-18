@@ -2,6 +2,7 @@ import { useState } from "react";
 import { HiOutlineEye, HiOutlineEyeOff } from "react-icons/hi";
 import Swal from "sweetalert2";
 import "@sweetalert2/theme-dark";
+import { Helmet } from "react-helmet";
 
 const SendMoney = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -55,6 +56,9 @@ const SendMoney = () => {
 
   return (
     <section>
+      <Helmet>
+        <title>Send Money - Payeer</title>
+      </Helmet>
       <h2 className="font-lato font-semibold text-3xl mb-8 text-center dark:text-white">
         Send Money
       </h2>

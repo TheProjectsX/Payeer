@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useLoaderData } from "react-router-dom";
 import Swal from "sweetalert2";
 import "@sweetalert2/theme-dark";
+import { Helmet } from "react-helmet";
 
 const AdminManageUsers = () => {
   const [allUsers, setAllUsers] = useState(useLoaderData().users);
@@ -104,6 +105,9 @@ const AdminManageUsers = () => {
 
   return (
     <section>
+      <Helmet>
+        <title>Manage Users - Admin</title>
+      </Helmet>
       <h2 className="font-lato font-semibold text-3xl mb-8 text-center dark:text-white">
         Manage Users
       </h2>

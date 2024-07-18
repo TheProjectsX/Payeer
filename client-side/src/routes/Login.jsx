@@ -3,6 +3,7 @@ import { HiOutlineEye, HiOutlineEyeOff } from "react-icons/hi";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import UserDataContext from "../context/context";
+import { Helmet } from "react-helmet";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -52,6 +53,9 @@ const Login = () => {
 
   return (
     <>
+      <Helmet>
+        <title>Login to your Account - Payeer</title>
+      </Helmet>
       <div className="flex flex-col items-center justify-center sm:px-6 py-8 mx-auto h-screen">
         <h3 className="flex items-center mb-6 text-2xl font-semibold dark:text-white font-lato">
           Welcome Back!

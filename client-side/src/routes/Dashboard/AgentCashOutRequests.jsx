@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLoaderData } from "react-router-dom";
 import Swal from "sweetalert2";
 import "@sweetalert2/theme-dark";
+import { Helmet } from "react-helmet";
 
 const AgentCashOutRequests = () => {
   const [cashOutRequests, setCashOutRequests] = useState(
@@ -47,6 +48,9 @@ const AgentCashOutRequests = () => {
 
   return (
     <section>
+      <Helmet>
+        <title>Cash Out Requests - Agent</title>
+      </Helmet>
       <h2 className="font-lato font-semibold text-3xl mb-8 text-center dark:text-white">
         Cash Out Requests
       </h2>

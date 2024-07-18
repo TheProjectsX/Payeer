@@ -5,6 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { useEffect, useState } from "react";
 
 import "@sweetalert2/theme-dark";
+import { Helmet } from "react-helmet";
 
 function App() {
   const [userAuthData, setUserAuthData] = useState(null);
@@ -29,6 +30,9 @@ function App() {
 
   return (
     <>
+      <Helmet>
+        <title>Payeer - Mobile Financial Service</title>
+      </Helmet>
       <ToastContainer
         position="top-left"
         autoClose={3000}

@@ -2,6 +2,7 @@ import { useContext } from "react";
 import UserDataContext from "../../context/context";
 import { useLoaderData } from "react-router-dom";
 import { toast } from "react-toastify";
+import { Helmet } from "react-helmet";
 
 export const Home = () => {
   const context = useContext(UserDataContext);
@@ -11,6 +12,9 @@ export const Home = () => {
 
   return (
     <section>
+      <Helmet>
+        <title>Dashboard - Payeer</title>
+      </Helmet>
       <h2 className="font-lato font-semibold text-2xl mb-8 text-center dark:text-white">
         Welcome to your Dashboard!
       </h2>

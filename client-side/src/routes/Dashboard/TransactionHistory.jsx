@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet";
 import { useLoaderData } from "react-router-dom";
 
 const TransactionHistory = () => {
@@ -5,6 +6,9 @@ const TransactionHistory = () => {
 
   return (
     <section>
+      <Helmet>
+        <title>Transaction History - Payeer</title>
+      </Helmet>
       <h2 className="font-lato font-semibold text-3xl mb-8 text-center dark:text-white">
         Your Transaction History
       </h2>
