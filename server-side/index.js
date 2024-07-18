@@ -25,7 +25,7 @@ const app = express();
 app.use(express.json());
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://chatter-box-x.vercel.app"],
+    origin: ["http://localhost:5173", "https://payeer-theta.vercel.app"],
     credentials: true,
   })
 );
